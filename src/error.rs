@@ -16,12 +16,6 @@ impl Error {
     {
         Error(Box::new(MessageError(message)))
     }
-    /// [anyhow::Error::chain]
-    pub fn chain(&self) -> Chain<'_> {
-        Chain {
-            next: Some(self.0.as_ref()),
-        }
-    }
     /// [anyhow::Error::context]
     pub fn context<C>(self, context: C) -> Self
     where
@@ -31,6 +25,12 @@ impl Error {
             error: self,
             context,
         }))
+    }
+    /// [anyhow::Error::chain]
+    pub fn chain(&self) -> Chain<'_> {
+        Chain {
+            next: Some(self.0.as_ref()),
+        }
     }
 }
 impl<E> From<E> for Error
@@ -60,18 +60,6 @@ impl fmt::Display for Error {
 impl fmt::Debug for Error {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(formatter)
-    }
-}
-/// [anyhow::Chain]
-pub struct Chain<'a> {
-    next: Option<&'a (dyn error::Error + 'static)>,
-}
-impl<'a> Iterator for Chain<'a> {
-    type Item = &'a (dyn error::Error + 'static);
-    fn next(&mut self) -> Option<Self::Item> {
-        let error = self.next?;
-        self.next = error.source();
-        Some(error)
     }
 }
 struct MessageError<M>(M);
@@ -129,5 +117,17 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.context.fmt(f)
+    }
+}
+/// [anyhow::Chain]
+pub struct Chain<'a> {
+    next: Option<&'a (dyn error::Error + 'static)>,
+}
+impl<'a> Iterator for Chain<'a> {
+    type Item = &'a (dyn error::Error + 'static);
+    fn next(&mut self) -> Option<Self::Item> {
+        let error = self.next?;
+        self.next = error.source();
+        Some(error)
     }
 }
